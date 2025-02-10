@@ -30,7 +30,7 @@ def delete_name_in_tables(document_path, search_name, output_path):
         return False, 0
 
 # Adjust the example usage accordingly
-document_path = 'takjil jabur fix 1445 copy.docx'  # Ensure the path is correct
+document_path = 'FIX JADWAL PEMBERI HIDANGAN 1446 H copy.docx'  # Ensure the path is correct
 name_file_path = 'name_list.txt'  # Path to your .txt file containing names
 
 # Iterate over each name and delete it from the document

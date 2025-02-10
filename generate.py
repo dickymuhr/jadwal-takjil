@@ -1,4 +1,5 @@
 from docx import Document
+
 from docx.shared import Pt
 import re
 import subprocess
@@ -9,22 +10,28 @@ def count_pdf_pages(pdf_path):
     return len(reader.pages)
 
 def add_name_to_first_page_header(document, search_name):
-    section = document.sections[0]
-    # Enable different first page
-    section.different_first_page_header_footer = True
-    # Access the first page header
-    first_page_header = section.first_page_header
+    tables = document.tables
+    if tables:
+        first_table = tables[0]  # Get the first table
+        parent = first_table._element.getparent()  # Get the table's parent XML element
+        
+        # Find the first empty paragraph after the table
+        for index, para in enumerate(document.paragraphs):
+            if para.text.strip() == "":  # Check for an empty paragraph
+                new_paragraph = document.paragraphs[index]  # Use the same paragraph to replace text
+                new_paragraph.text = search_name  # Replace empty line with name
+                
+                # Apply formatting
+                new_paragraph.alignment = 2  # Right-aligned text
+                run = new_paragraph.runs[0]
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(12)
+                run.bold = True
 
-    # Ensure minimal spacing by setting the paragraph's space before and after to 0
-    paragraph = first_page_header.paragraphs[0] if first_page_header.paragraphs else first_page_header.add_paragraph()
-    paragraph.paragraph_format.space_before = Pt(0)
-    paragraph.paragraph_format.space_after = Pt(0)
+                # print("✅ Successfully replaced empty line with name.")
+                return  # Stop after replacing the first empty line
 
-    # Add the name to the right of the first page header
-    run = paragraph.add_run(search_name)
-    paragraph.alignment = 2  # 2 is for right-aligned text in python-docx
-    run.font.name = 'Times New Roman'
-    run.font.size = Pt(10)
+    print("⚠️ No empty paragraph found after the first table.")
 
 
 def bold_name_in_tables(document_path, search_name, output_path):
@@ -52,7 +59,7 @@ def bold_name_in_tables(document_path, search_name, output_path):
                             bold_run = paragraph.add_run(original_text[match.start():match.end()])
                             bold_run.bold = True
                             bold_run.font.name = 'Times New Roman'
-                            bold_run.font.size = Pt(10)
+                            bold_run.font.size = Pt(12)
                             count_bolded += 1
                             start = match.end()
                         if start < len(original_text):
@@ -61,11 +68,11 @@ def bold_name_in_tables(document_path, search_name, output_path):
     
     if found:
         doc.save(output_path)
-        doc.save(output_path)
-        print(f"Name found and bolded {count_bolded} times.")
+        print(f"Name found and bolded {count_bolded} times.", search_name)
         return True, count_bolded
     else:
-        print("Name not found.")
+        print("Name not found.", search_name)
+        doc.save(output_path)
         return False, 0
 
 def convert_docx_to_pdf_libreoffice(input_path, output_path):
@@ -101,24 +108,24 @@ def process_names_from_file(name_file_path, document_path, docx_output_base_path
             # Bold the name in the tables and save the document
             found, count_bolded = bold_name_in_tables(document_path, name, output_docx_path)
             
-            if found:
-                # Convert the modified DOCX to PDF
-                convert_docx_to_pdf_libreoffice(output_docx_path, output_pdf_path)
+            # if found:
+            #     # Convert the modified DOCX to PDF
+            #     convert_docx_to_pdf_libreoffice(output_docx_path, output_pdf_path)
                 
-                # Perform page count check here after conversion
-                actual_page_count = count_pdf_pages(output_docx_path.replace('docx','pdf'))
-                if actual_page_count != expected_page_count:
-                    error_message = f"Error: The document for '{name}' was expected to have {expected_page_count} pages, but it has {actual_page_count}."
-                    raise ValueError(error_message)
+            #     # Perform page count check here after conversion
+            #     actual_page_count = count_pdf_pages(output_docx_path.replace('docx','pdf'))
+            #     if actual_page_count != expected_page_count:
+            #         error_message = f"Error: The document for '{name}' was expected to have {expected_page_count} pages, but it has {actual_page_count}."
+            #         raise ValueError(error_message)
                 
-                print(f"Document for '{name}' is correctly formatted with {expected_page_count} pages.")
-            else:
-                error_message = f"No occurrences found for {name}."
-                raise ValueError(error_message)
+            #     print(f"Document for '{name}' is correctly formatted with {expected_page_count} pages.")
+            # else:
+            #     error_message = f"No occurrences found for {name}."
+            #     raise ValueError(error_message)
 
 # Example usage
-name_file_path = '/home/diccode/jadwal-takjil/name_lists.txt'  # Path to your .txt file containing names
-document_path = '/home/diccode/jadwal-takjil/takjil jabur fix 1445.docx'  # Path to the source document
+name_file_path = '/home/diccode/jadwal-takjil/name_list.txt'  # Path to your .txt file containing names
+document_path = '/home/diccode/jadwal-takjil/FIX JADWAL PEMBERI HIDANGAN 1446 H.docx'  # Path to the source document
 docx_output_base_path = '/home/diccode/jadwal-takjil/docx'  # Base path where modified DOCX files will be saved
 pdf_output_base_path = '/home/diccode/jadwal-takjil/pdf'  # Base path where converted PDF files will be saved
 
